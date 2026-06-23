@@ -1,14 +1,11 @@
-/*
 import {
   ExponentialRegression,
   PolynomialRegression,
   PowerRegression,
   SimpleLinearRegression,
 } from 'ml-regression';
-*/
-declare const ML: any;
 
-type DataPoint = {
+export type DataPoint = {
   x: number;
   y: number;
 };
@@ -123,7 +120,7 @@ function describeTrend(data: DataPoint[], title: string): string {
   }[] = [];
 
   // Linear
-  const linModel = new ML.SimpleLinearRegression(trainX, trainY);
+  const linModel = new SimpleLinearRegression(trainX, trainY);
   candidates.push({
     type: 'linear',
     model: linModel,
@@ -131,23 +128,27 @@ function describeTrend(data: DataPoint[], title: string): string {
   });
 
   // Polynomial
-  for (let degree = 2; degree <= MAX_POLYNOMIAL_DEGREE; degree += 1) {
-    const polyModel = new ML.PolynomialRegression(trainX, trainY, degree);
-    const turningPnts = countTurningPnts(polyModel, testX);
+  try {
+    for (let degree = 2; degree <= MAX_POLYNOMIAL_DEGREE; degree += 1) {
+      const polyModel = new PolynomialRegression(trainX, trainY, degree);
+      const turningPnts = countTurningPnts(polyModel, testX);
 
-    candidates.push({
-      type: `${degree}${degree === 2 ? 'nd' : 'th'}-degree-polynomial`,
-      model: polyModel,
-      score:
-        turningPnts === degree - 1
-          ? r2(polyModel, testX, testY)
-          : Number.MIN_SAFE_INTEGER,
-    });
+      candidates.push({
+        type: `${degree}${degree === 2 ? 'nd' : 'th'}-degree-polynomial`,
+        model: polyModel,
+        score:
+          turningPnts === degree - 1
+            ? r2(polyModel, testX, testY)
+            : Number.MIN_SAFE_INTEGER,
+      });
+    }
+  } catch  {
+    // pass, in case PolynomialRegression crashes
   }
-
+  
   // Logarithmic
-  const logModel = new ML.SimpleLinearRegression(
-    trainX.map((x) => [Math.log(x)]),
+  const logModel = new SimpleLinearRegression(
+    trainX.map((x) => Math.log(x)),
     trainY,
   );
   candidates.push({
@@ -161,7 +162,7 @@ function describeTrend(data: DataPoint[], title: string): string {
   });
 
   // Exponential
-  const expModel = new ML.ExponentialRegression(trainX, trainY);
+  const expModel = new ExponentialRegression(trainX, trainY);
   candidates.push({
     type: 'exponential',
     model: expModel,
@@ -169,7 +170,7 @@ function describeTrend(data: DataPoint[], title: string): string {
   });
 
   // Power law
-  const powModel = new ML.PowerRegression(trainX, trainY);
+  const powModel = new PowerRegression(trainX, trainY);
   candidates.push({
     type: 'power',
     model: powModel,
@@ -208,7 +209,7 @@ export function generateAccessibleChartDescription(
 ): string {
   const parts: string[] = [];
 
-  parts.push(`${name} chart showing ${data.length} data points.`);
+  parts.push(`${name} scatterplot showing ${data.length} data points.`);
 
   parts.push(
     `The horizontal axis represents ${xTitle} and the vertical axis represents ${yTitle}.`,
