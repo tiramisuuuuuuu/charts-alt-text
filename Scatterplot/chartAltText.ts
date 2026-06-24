@@ -1,7 +1,6 @@
 import {
   ExponentialRegression,
   PolynomialRegression,
-  PowerRegression,
   SimpleLinearRegression,
 } from 'ml-regression';
 
@@ -167,14 +166,6 @@ function describeTrend(data: DataPoint[], title: string): string {
     type: 'exponential',
     model: expModel,
     score: r2(expModel, testX, testY),
-  });
-
-  // Power law
-  const powModel = new PowerRegression(trainX, trainY);
-  candidates.push({
-    type: 'power',
-    model: powModel,
-    score: r2(powModel, testX, testY),
   });
 
   candidates.sort((a, b) => b.score - a.score);
