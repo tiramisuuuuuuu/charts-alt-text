@@ -4,6 +4,8 @@ import {
   SimpleLinearRegression,
 } from 'ml-regression';
 
+import { IsolationForest } from 'isolation-forest'
+
 export type DataPoint = {
   x: number;
   y: number;
@@ -58,6 +60,16 @@ function countTurningPnts(
   return turningPoints;
 }
 
+function std(array: number[]) {
+  const n = array.length;
+  if (!n) return 0;
+  
+  const mean = array.reduce((a, b) => a + b) / n;
+  const variance = array.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
+  
+  return Math.sqrt(variance);
+}
+
 function r2(
   model: { predict(x: number): number },
   testX: number[],
@@ -79,7 +91,7 @@ function r2(
   return 1 - ssRes / ssTot;
 }
 
-function chooseBestModel(candidates: { type: string; score: number }[]) {
+function chooseBestModel(candidates: { type: string; score: number; model: { predict(x: number): number } }[]) {
   const best = candidates[0]!;
 
   // Simplicity bias:
@@ -99,7 +111,17 @@ function describeTrend(data: DataPoint[], title: string): string {
     return `There is not enough data to programatically determine a trend.`;
   }
 
-  const sampled = downsample(data, MAX_SAMPLE_SIZE);
+  // Remove outliers before fitting data to a trend
+  const isolationForest = new IsolationForest();
+  isolationForest.fit(data); 
+  const trainingScores = isolationForest.scores();
+  console.log(title, " outlier scores ", trainingScores, " data points ", data)
+  const outlierThres = 0.6;
+  const outliers = data.filter((_, idx) => trainingScores[idx] >= outlierThres);
+  const filteredData = data.filter((_, idx) => trainingScores[idx] < outlierThres);
+
+  const sampled = downsample(filteredData, MAX_SAMPLE_SIZE);
+  
   const shuffled = [...sampled].sort(() => Math.random() - 0.5);
   const splitIndex = Math.floor(shuffled.length * 0.8);
 
@@ -170,7 +192,7 @@ function describeTrend(data: DataPoint[], title: string): string {
 
   candidates.sort((a, b) => b.score - a.score);
 
-  console.log(title, ' GRAPH ', candidates);
+  console.log(title, ' CANDIDATES ', candidates);
 
   if (!candidates.length) {
     return `Error programmatically fitting the data to a trend.`;
@@ -188,6 +210,23 @@ function describeTrend(data: DataPoint[], title: string): string {
   else if (best.score > 0.5)
     parts.push('The trend is noticeable but substantial variation exists.');
   else parts.push('The trend is weak and points are widely dispersed.');
+
+  // Confirm whether removed points were outliers
+  const residuals = <number[]>[];
+  filteredData.forEach(d => {
+    const r = Math.abs(d.y - best.model.predict(d.x));
+    residuals.push(r);
+  })
+  console.log(title, " residuals ", residuals)
+  const sigma = std(residuals);
+  const trueOutliers = outliers.filter(d => {
+    const r = Math.abs(d.y - best.model.predict(d.x));
+    return r > 3 * sigma;
+  })
+
+  if (trueOutliers.length > 0) {
+    parts.push(`${trueOutliers.length} outlier point${trueOutliers.length!=1 ? 's were' : ' was'} detected.`)
+  }
 
   return parts.join(' ');
 }

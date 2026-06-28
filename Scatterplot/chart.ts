@@ -42,3 +42,5 @@ function generateChart(data: DataPoint[], chartTitle: string) {
 }
 generateChart(anscombeDataset.map(row => ({ x: row.x1, y: row.y1 })), "Dataset 1");
 generateChart(anscombeDataset.map(row => ({ x: row.x2, y: row.y2 })), "Dataset 2");
+generateChart(anscombeDataset.map(row => ({ x: row.x3, y: row.y3 })), "Dataset 3");
+generateChart(anscombeDataset.map(row => ({ x: row.x4, y: row.y4 })), "Dataset 4");
